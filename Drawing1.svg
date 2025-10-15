@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with sK1/UniConvertor (http://sk1project.org/) -->
+
+<svg
+   width="595.276pt"
+   height="841.89pt"
+   viewBox="0 0 595.276 841.89"
+   fill-rule="evenodd"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="Drawing1.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     inkscape:zoom="0.48373302"
+     inkscape:cx="395.87953"
+     inkscape:cy="571.59629"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="lot-02" />
+  <g
+     id="lot-01"
+     inkscape:label="lote 1"
+     transform="translate(-286.83177,-32.559282)">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 321.081,68.086 H 840"
+       id="path5" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 840,68.086 V 325.85"
+       id="path6" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 840,325.85 H 320.588"
+       id="path7" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 320.588,325.85 321.081,68.086"
+       id="path8" />
+  </g>
+  <g
+     id="lot-02"
+     inkscape:label="lote 2"
+     transform="translate(-286.83177,-32.559282)">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 320.094,584.126 H 839.013"
+       id="path1" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 839.013,584.126 V 841.89"
+       id="path2" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="M 839.013,841.89 H 319.6"
+       id="path3" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.850394;stroke-linecap:round;stroke-linejoin:round"
+       d="m 319.6,841.89 0.494,-257.764"
+       id="path4" />
+  </g>
+</svg>
