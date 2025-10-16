@@ -1,257 +1,533 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <title>Mapa de Loteamento Interativo</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal de Produção - Mapa de Lotes</title>
   <style>
-    /* ============== ESTILO GERAL E MINIMALISTA ============== */
+    :root {
+      --done: #28a745; /* verde - produzido */
+      --remaining: #f0ad4e; /* amarelo - falta */
+      --current: #0d6efd; /* azul - em execução */
+      --bg: #f8f9fa;
+      --terminal-bg: #1e1e1e;
+      --terminal-text: #f0f0f0;
+      --terminal-prompt: #00ff00;
+      --terminal-error: #ff6b6b;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f4f7f9;
-      color: #333;
+      font-family: 'Courier New', monospace;
+      background: var(--bg);
       margin: 0;
       padding: 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 0 12px;
     }
 
     .container {
       display: flex;
-      flex-wrap: wrap;
-      gap: 25px;
-      justify-content: center;
-      width: 100%;
-      max-width: 1200px;
-    }
-    
-    .map-container {
-      flex: 3; /* O mapa ocupa mais espaço */
-      min-width: 300px;
-    }
-    
-    .info-container {
-      flex: 1; /* O painel ocupa menos espaço */
-      min-width: 280px;
+      gap: 20px;
+      flex: 1;
+      overflow: hidden;
     }
 
-    h2 {
-      width: 100%;
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 25px;
+    .map-area {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .terminal-area {
+      width: 400px;
+      display: flex;
+      flex-direction: column;
     }
 
     svg {
-      background-color: #fff;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-      border-radius: 12px;
       width: 100%;
-      height: auto;
+      flex: 1;
+      display: block;
     }
 
-    .lote {
-      stroke: #333;
-      stroke-width: 1;
-      cursor: pointer;
-      transition: fill 0.2s ease-in-out;
+    .terminal {
+      background: var(--terminal-bg);
+      color: var(--terminal-text);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      flex: 1;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.4;
     }
-    
-    .lote.disponivel { fill: #a4c2f4; }
-    .lote.andamento { fill: #ffd966; }
-    .lote.concluido { fill: #9ad27a; }
 
-    /* ============== PAINEL LATERAL E LEGENDA ============== */
-    .info-painel {
-      padding: 20px;
-      border-radius: 12px;
+    .terminal-line {
+      margin-bottom: 5px;
+    }
+
+    .terminal-prompt {
+      color: var(--terminal-prompt);
+    }
+
+    .terminal-error {
+      color: var(--terminal-error);
+    }
+
+    .terminal-input {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .terminal-input span {
+      color: var(--terminal-prompt);
+      margin-right: 8px;
+    }
+
+    .terminal-input input {
+      background: transparent;
+      border: none;
+      color: var(--terminal-text);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      flex: 1;
+      outline: none;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .box {
+      width: 16px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    .help {
       background: #fff;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+      margin-top: 12px;
     }
 
-    .info-painel h3 {
+    .help h3 {
       margin-top: 0;
-      margin-bottom: 15px;
-      color: #2c3e50;
-      font-size: 1.1em;
-      border-bottom: 1px solid #eef2f5;
-      padding-bottom: 10px;
+      font-size: 14px;
     }
 
-    .item-legenda {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-      font-size: 0.95em;
-    }
-
-    .cor-legenda {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      margin-right: 12px;
-    }
-    
-    .cor-legenda.disponivel { background-color: #a4c2f4; }
-    .cor-legenda.andamento { background-color: #ffd966; }
-    .cor-legenda.concluido { background-color: #9ad27a; }
-    
-    /* ============== ESTILO DA ABA RETRÁTIL (PULL TAB) ============== */
-    .collapsible-header {
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none; /* Impede a seleção do texto ao clicar */
-    }
-
-    .collapsible-header .arrow {
-      font-size: 1.2em;
-      transition: transform 0.3s ease;
-    }
-
-    .collapsible-header.active .arrow {
-      transform: rotate(180deg);
-    }
-    
-    .collapsible-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease-out;
-      font-size: 0.9em;
-      color: #555;
-    }
-    
-    .collapsible-content p {
+    .help ul {
       margin: 8px 0;
-      padding-left: 5px;
-      border-left: 2px solid #eef2f5;
+      padding-left: 20px;
     }
-    .collapsible-content strong {
-      color: #333;
+
+    .help li {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .help code {
+      background: #f1f1f1;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    .lote-highlight {
+      fill: var(--current);
+      opacity: 0.7;
     }
   </style>
 </head>
-
 <body>
-  <h2>Mapa de Loteamento Interativo</h2>
-
+  <h1>Terminal de Produção - Mapa de Lotes</h1>
+  
   <div class="container">
-    
-    <div class="map-container">
-      <svg
-        viewBox="0 0 600 400"
-        xmlns="http://www.w3.org/2000/svg"
-        id="mapa">
-        <rect id="lot-01" class="lote disponivel" x="320" y="68" width="200" height="100" />
-        <polygon id="lot-03" class="lote disponivel" points="320,200 520,200 550,300 300,300" />
-        <polygon id="lot-04" class="lote disponivel" points="100,50 200,55 190,150 110,140" />
+    <div class="map-area">
+      <svg id="svgmap" viewBox="0 0 2550 3300" xmlns="http://www.w3.org/2000/svg">
+        <!-- O SVG será inserido aqui pelo JavaScript -->
       </svg>
-    </div>
-
-    <div class="info-container">
-      <div class="info-painel">
-        <h3>Legenda</h3>
-        <div class="item-legenda">
-          <span class="cor-legenda disponivel"></span>
-          <span>Disponível</span>
-        </div>
-        <div class="item-legenda">
-          <span class="cor-legenda andamento"></span>
-          <span>Em Andamento</span>
-        </div>
-        <div class="item-legenda">
-          <span class="cor-legenda concluido"></span>
-          <span>Concluído</span>
-        </div>
-        
-        <hr style="border: none; border-top: 1px solid #eef2f5; margin: 20px 0;">
-
-        <div class="collapsible-header">
-          <h3>Status dos Lotes</h3>
-          <span class="arrow">▾</span>
-        </div>
-        <div class="collapsible-content" id="status-lotes">
-          </div>
+      
+      <div class="legend">
+        <span><i class="box" style="background:var(--done)"></i>Produzido</span>
+        <span><i class="box" style="background:var(--remaining)"></i>Falta</span>
+        <span><i class="box" style="background:var(--current)"></i>Em execução</span>
+        <span><i class="box" style="background:#dbdbdb"></i>Lotes</span>
+        <span><i class="box" style="background:#ffbf00"></i>Demarcação</span>
+        <span><i class="box" style="background:#bababa"></i>Ruas</span>
       </div>
     </div>
     
+    <div class="terminal-area">
+      <div class="terminal" id="terminal">
+        <div class="terminal-line">Sistema de Controle de Produção de Lotes</div>
+        <div class="terminal-line">Digite 'ajuda' para ver os comandos disponíveis</div>
+        <div class="terminal-line">&nbsp;</div>
+        <div class="terminal-line terminal-prompt">produção@lotes:~$</div>
+      </div>
+      
+      <div class="terminal-input">
+        <span class="terminal-prompt">$</span>
+        <input type="text" id="command-input" placeholder="Digite um comando...">
+      </div>
+      
+      <div class="help">
+        <h3>Comandos disponíveis:</h3>
+        <ul>
+          <li><code>produzir [lote] [metros]</code> - Registrar produção em um lote</li>
+          <li><code>iniciar [lote] [metros]</code> - Iniciar produção em um lote</li>
+          <li><code>status [lote]</code> - Ver status de um lote</li>
+          <li><code>listar</code> - Listar todos os lotes</li>
+          <li><code>limpar</code> - Limpar o terminal</li>
+          <li><code>ajuda</code> - Mostrar esta ajuda</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
-
   <script>
-    // --- LÓGICA DO MAPA (EXISTENTE E CORRETA) ---
-    const lotes = document.querySelectorAll(".lote");
-    const status = ["disponivel", "andamento", "concluido"];
-    const statusContainer = document.getElementById('status-lotes');
-
-    function atualizarListaStatus() {
-      const listas = { disponivel: [], andamento: [], concluido: [] };
-
-      lotes.forEach(lote => {
-        const loteId = lote.id.replace('lot-', 'Lote ');
-        for (const s of status) {
-          if (lote.classList.contains(s)) {
-            listas[s].push(loteId);
-            break;
-          }
-        }
-      });
-
-      const htmlStatus = `
-        <p><strong>Disponíveis:</strong> ${listas.disponivel.join(', ') || 'Nenhum'}</p>
-        <p><strong>Em Andamento:</strong> ${listas.andamento.join(', ') || 'Nenhum'}</p>
-        <p><strong>Concluídos:</strong> ${listas.concluido.join(', ') || 'Nenhum'}</p>
-      `;
-      statusContainer.innerHTML = htmlStatus;
-    }
-
-    lotes.forEach(lote => {
-      lote.addEventListener("click", () => {
-        let statusAtual = "";
-        for (const s of status) {
-          if (lote.classList.contains(s)) {
-            statusAtual = s;
-            break;
-          }
-        }
-        let indiceAtual = status.indexOf(statusAtual);
-        let proximoIndice = (indiceAtual + 1) % status.length;
-        
-        lote.classList.remove(statusAtual);
-        lote.classList.add(status[proximoIndice]);
-
-        atualizarListaStatus();
-      });
-    });
-    
-    atualizarListaStatus();
-
-    // --- LÓGICA DA ABA RETRÁTIL (CORRIGIDA E MAIS SEGURA) ---
-    const collapsibleHeader = document.querySelector(".collapsible-header");
-
-    // 1. VERIFICA se o cabeçalho foi realmente encontrado
-    if (collapsibleHeader) {
+    document.addEventListener('DOMContentLoaded', () => {
+      const svg = document.getElementById('svgmap');
+      const terminal = document.getElementById('terminal');
+      const commandInput = document.getElementById('command-input');
       
-      // 2. Encontra o painel de conteúdo (que é o elemento irmão logo após o cabeçalho)
-      const collapsibleContent = collapsibleHeader.nextElementSibling;
-
-      collapsibleHeader.addEventListener("click", function() {
+      // Dados de produção
+      const productionData = {};
+      
+      // Inserir o SVG diretamente no HTML
+      // Substitua este conteúdo pelo seu SVG completo
+      svg.innerHTML = `
+        <!-- Cole aqui o conteúdo completo do seu arquivo SVG LOTES.svg -->
+        <!-- Por exemplo: -->
+        <defs id="defs2955"></defs>
+        <title id="title1">ZWCAD SVG Drawing</title>
+        <desc id="desc1">Produce by ZWCAD</desc>
+        <path d="m 1282.8294,870.85287 h -2 -3 l -3,-1 -2,-2 -2,-1 -2,-2 -2,-3 -1,-2 -1,-3 v -2 l -1,-3 3,-253 h 4 v -2 l 1,-2 1,-2 3,-3 1,-2 2,-3 1,-3 1,-3 v -3 -3 -3 l -1,-3 -1,-3 -2,-3 -2,-2 -2,-3 -3,-1 -3,-2 -3,-1 -3,-1 h -3 -3 l -3,1 -3,1 -3,1 -2,2 -3,2 -2,2 -2,2 -1,3 -1,3 -1,3 v 3 3 3 l 1,3 1,3 2,2 2,3 1,2 1,3 1,3 h 5 l -3,253 v 3 2 l -1,3 -2,2 -1,2 -2,2 -3,2 -2,1 -3,1 -2,1 h -3 l -86,-1 h -2 l -3,-1 -3,-1 -2,-1 -2,-2 -2,-2 -2,-2 -1,-2 -1,-3 v -2 l -1,-3 3,-253 h 4 v -2 l 1,-3 1,-1 2,-3 2,-2 2,-3 1,-3 1,-3 v -3 -3 -4 l -1,-3 -2,-3 -1,-2 -2,-3 -3,-2 -2,-2 -3,-1 -3,-1 -3,-1 h -3 -3 l -3.5117,-0.51172 -2.4883,1.51172 -3,2 -3,1 -2,2 -2,3 -2,2 -1,3 -1,3 -1,3 v 3 3 3 l 1,3 1,2 2,3 2,3 1,2 1,3 1,3 h 4 l -2,252 v 3 l -1,3 -1,3 -1,2 -2,3 -3,1 -2,2 -3,1 -3,1 -188.99997,28 -2,1 -3,-1 h -3 l 6,9 8,20 1,-3 2,-2 2,-2 2,-2 2,-2 3,-1 h 3 l 163.99997,-25 h 3 3 l 3,1 2,2 2,1 2,2 2,2 1,3 1,2 1,3 v 3 l -2,246.00003 -1,2 v 3 l -1,2 -1,3 -2,2 -2,2 -2,2 -3,1 -2,1 h -3 -3 l -149.99997,-1 h -3 l -3,-1 -2,-1 -2,-1 -3,-2 -2,-2 -1,-2 -5,33 2,-2 3,-2 4,-1 h 3 l 158.99997,2 h 3 3 l 2,1 3,2 2,1 2,2 1,2 2,3 v 2 l 1,3 v 3 l -1,155 v 2 l -1,3 -1,3 -1,2 -2,2 -2,2 -2,2 -2,1 -3,1 -3,1 h -2 l -180.99997,-2 h -2 l -3,-1 -3,-1 -2,-1 -3,-2 -1,-2 -1,3 1,30 2,-2 2,-2 3,-1 2,-1 3,-1 h 3 l 851.99997,8 v -20 h -43 -2 l -3,-1 -3,-1 -2,-1 -2,-2 -2,-2 -2,-2 -1,-2 -1,-3 v -2 l -1,-3 4,-458.00003 v -3 l 1,-2 1,-3 1,-2 2,-3 2,-1 2,-2 3,-1 2,-1 3,-1 h 2 43 l 1,-19 -186,-1 h -3 l -3,-1 -2,-1 -3,-1 -2,-2 -2,-2 -1,-2 -2,-2 -1,-3 v -3 -2 l 2,-253 h 5 v -3 -2 l 2,-2 2,-2 2,-3 1,-2 1,-3 1,-3 1,-4 -1,-3 v -3 l -1,-3 -1,-3 -2,-2 -2,-3 -2,-2 -3,-2 -3,-1 -3,-2 h -3 -3 -3 -3 l -3,1 -3,1 -2,2 -3,2 -2,2 -2,3 -1,2 -1,3 -1,3 v 3 3 3 l 1,3 1,3 2,3 2,2 1,3 1,3 1,3 h 5 l -2,252 -1,3 v 3 l -1,2 -2,3 -1,2 -2,2 -2,1 -3,2 -2,1 h -3 -3 -86 l -2,-1 h -3 l -2,-1 -3,-1 -2,-2 -2,-2 -2,-2 -1,-3 -1,-2 v -3 -3 l 2,-253 4,1 1,-3 v -2 l 1,-2 3,-2 2,-3 1,-3 1,-3 1,-3 v -3 -3 -3 l -1,-3 -1,-3 -2,-3 -2,-2 -2,-2 -3,-2 -3,-2 -3,-1 h -3 l -3,-1 h -3 l -3,1 -3,1 -3,1 -2,2 -3,2 -2,2 -2,3 -1,2 -1,3 -1,3 v 3 3 3 l 1,3 1,3 2,3 2,2 1,3 1,2 1,3 h 5 l -3,253 v 3 3 l -1,2 -2,3 -1,2 -2,2 -2,1 -3,1 -2,1 -3,1 h -3 z m 286,22 h 43 l 43,1 h 3 3 l 2,1 3,2 2,1 2,2 1,2 2,3 v 2 l 1,3 v 3 l -4,458.00003 v 2 l -1,3 -1,3 -1,2 -2,2 -1,2 -3,2 -2,1 -3,1 h -2 l -3,1 -43,-1 h -43 -3 l -2,-1 -3,-1 -2,-1 -2,-2 -2,-2 -2,-2 -1,-2 -1,-3 -1,-3 v -2 l 4,-458.00003 v -3 l 1,-3 1,-2 1,-3 2,-2 2,-2 2,-1 2,-2 h 3 l 3,-1 z m -143,-1 h 43 43 l 3,1 h 3 l 2,1 2,1 3,2 2,2 1,2 1,3 1,2 1,3 v 3 l -4,457.00003 v 3 l -1,3 -1,2 -1,3 -2,2 -2,2 -2,1 -2,2 -3,1 h -2 -3 -43 -43 l -3,-1 h -2 l -3,-1 -2,-1 -2,-2 -2,-2 -2,-2 -1,-3 -1,-2 -1,-3 v -3 l 4,-458.00003 v -2 l 1,-3 1,-2 1,-3 2,-2 2,-2 2,-1 2,-2 3,-1 h 3 z m -143,-2 43,1 h 43 3 l 2,1 3,1 2,1 3,2 1,2 2,2 1,2 1,3 1,3 v 2 l -4,458.00003 v 3 l -1,3 -1,2 -1,3 -2,2 -2,2 -2,1 -2,1 -3,1 -2,1 h -3 -43 l -43,-1 h -3 -2 l -3,-1 -2,-2 -2,-1 -2,-2 -2,-2 -1,-3 -1,-2 -1,-3 v -3 l 4,-458.00003 v -2 l 1,-3 1,-3 1,-2 2,-2 2,-2 2,-2 2,-1 3,-1 h 2 z m -38,19 -4,458.00003 v 3 l -1,2 -1,3 -1,2 -2,2 -2,2 -2,2 -2,1 -3,1 -3,1 h -2 -43 l -43,-1 h -3 l -3,-1 -2,-1 -2,-1 -3,-2 -2,-2 -1,-2 -1,-2 -1,-3 -1,-2 v -3 l 4,-458.00003 v -3 l 1,-2 1,-3 1,-2 2,-2 2,-2 2,-2 2,-1 3,-1 2,-1 h 3 43 l 43,1 h 3 l 2,1 3,1 2,1 2,2 2,2 2,2 1,2 1,3 1,2 z" stroke="none" fill="#dbdbdb" fill-rule="evenodd" id="lote-1" />
+        <!-- Adicione mais elementos path/polygon conforme necessário -->
+        <!-- Para cada lote, adicione um id único como "lote-1", "lote-2", etc. -->
+      `;
+      
+      // Identificar e processar os elementos do SVG
+      function processSVGElements() {
+        const paths = svg.querySelectorAll('path, polygon, polyline');
         
-        // 3. VERIFICA se o conteúdo também existe antes de tentar animá-lo
-        if (collapsibleContent) {
-          this.classList.toggle("active");
-
-          if (collapsibleContent.style.maxHeight) {
-            collapsibleContent.style.maxHeight = null;
-          } else {
-            // A linha que dava erro agora está protegida pelas verificações
-            collapsibleContent.style.maxHeight = collapsibleContent.scrollHeight + "px";
+        paths.forEach((element, index) => {
+          // Se o elemento não tem ID, atribuir um
+          if (!element.id) {
+            element.id = `lote-${index + 1}`;
+          }
+          
+          const id = element.id;
+          const fill = element.getAttribute('fill');
+          const stroke = element.getAttribute('stroke');
+          
+          // Identificar lotes (áreas cinza sem borda)
+          if (fill === '#dbdbdb' && (!stroke || stroke === 'none')) {
+            element.classList.add('lote');
+            productionData[id] = {
+              name: id,
+              type: 'lote',
+              total: 100, // Valor padrão em metros
+              produced: 0,
+              inProgress: 0
+            };
+            
+            // Adicionar evento de clique para facilitar identificação
+            element.addEventListener('click', () => {
+              addTerminalLine(`Lote selecionado: ${id}`, 'prompt');
+              commandInput.value = `status ${id}`;
+              commandInput.focus();
+            });
+            
+            element.style.cursor = 'pointer';
+          }
+        });
+        
+        addTerminalLine(`Sistema carregado. ${Object.keys(productionData).length} lotes identificados.`);
+        addLabels();
+        updateMap();
+      }
+      
+      // Função para gerar IDs únicos
+      function generateId() {
+        return 'lote-' + Math.random().toString(36).substr(2, 9);
+      }
+      
+      // Função para adicionar linha ao terminal
+      function addTerminalLine(text, type = 'normal') {
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+        
+        if (type === 'error') {
+          line.classList.add('terminal-error');
+        } else if (type === 'prompt') {
+          line.classList.add('terminal-prompt');
+        }
+        
+        line.textContent = text;
+        terminal.appendChild(line);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+      
+      // Função para adicionar labels aos lotes
+      function addLabels() {
+        // Remover labels antigos se existirem
+        const oldLabels = document.getElementById('labels');
+        if (oldLabels) oldLabels.remove();
+        
+        const labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        labelsGroup.id = 'labels';
+        
+        Object.keys(productionData).forEach(id => {
+          const element = document.getElementById(id);
+          if (!element) return;
+          
+          try {
+            const bbox = element.getBBox();
+            const cx = bbox.x + bbox.width / 2;
+            const cy = bbox.y + bbox.height / 2;
+            
+            // Só adicionar label se o lote for grande o suficiente
+            if (bbox.width < 50 || bbox.height < 30) return;
+            
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', cx - 45);
+            rect.setAttribute('y', cy - 10);
+            rect.setAttribute('rx', 4);
+            rect.setAttribute('ry', 4);
+            rect.setAttribute('width', 90);
+            rect.setAttribute('height', 20);
+            rect.setAttribute('fill', 'rgba(255,255,255,0.9)');
+            rect.setAttribute('stroke', '#666');
+            rect.setAttribute('stroke-width', '1');
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', cx);
+            text.setAttribute('y', cy + 5);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '10');
+            text.setAttribute('font-weight', '600');
+            text.setAttribute('fill', '#333');
+            text.setAttribute('data-id', id);
+            text.textContent = id;
+            
+            g.appendChild(rect);
+            g.appendChild(text);
+            labelsGroup.appendChild(g);
+          } catch(e) {
+            console.warn('Não foi possível adicionar label para', id, e);
+          }
+        });
+        
+        svg.appendChild(labelsGroup);
+      }
+      
+      // Função para atualizar o mapa
+      function updateMap() {
+        // Remover elementos de visualização anteriores
+        document.querySelectorAll('.map-overlay').forEach(el => el.remove());
+        
+        // Atualizar cada lote
+        Object.keys(productionData).forEach(id => {
+          const element = document.getElementById(id);
+          if (!element || !productionData[id]) return;
+          
+          const data = productionData[id];
+          const total = Math.max(0.0001, Number(data.total));
+          const produced = Math.max(0, Math.min(total, Number(data.produced)));
+          const inProgress = Math.max(0, Math.min(total - produced, Number(data.inProgress)));
+          
+          // Criar overlay para produção concluída
+          if (produced > 0) {
+            const doneOverlay = element.cloneNode(true);
+            doneOverlay.classList.add('map-overlay');
+            doneOverlay.setAttribute('fill', 'var(--done)');
+            doneOverlay.setAttribute('fill-opacity', '0.7');
+            doneOverlay.setAttribute('stroke', 'none');
+            element.parentNode.insertBefore(doneOverlay, element);
+          }
+          
+          // Criar overlay para produção em andamento
+          if (inProgress > 0) {
+            const progressOverlay = element.cloneNode(true);
+            progressOverlay.classList.add('map-overlay');
+            progressOverlay.setAttribute('fill', 'var(--current)');
+            progressOverlay.setAttribute('fill-opacity', '0.5');
+            progressOverlay.setAttribute('stroke', 'none');
+            element.parentNode.insertBefore(progressOverlay, element);
+          }
+          
+          // Atualizar label
+          updateLabel(id, produced, total);
+        });
+      }
+      
+      // Função para atualizar label
+      function updateLabel(id, produced, total) {
+        const label = document.querySelector(`#labels text[data-id="${id}"]`);
+        if (label) {
+          const percent = Math.round((produced / total) * 100);
+          label.textContent = `${produced}/${total}m (${percent}%)`;
+        }
+      }
+      
+      // Processar comandos
+      function processCommand(command) {
+        const parts = command.trim().toLowerCase().split(' ');
+        const cmd = parts[0];
+        const args = parts.slice(1);
+        
+        addTerminalLine(`$ ${command}`, 'prompt');
+        
+        switch(cmd) {
+          case 'produzir':
+            if (args.length < 2) {
+              addTerminalLine('Uso: produzir [lote] [metros]', 'error');
+              return;
+            }
+            
+            const loteProd = args[0];
+            const metrosProd = parseFloat(args[1]);
+            
+            if (!productionData[loteProd]) {
+              addTerminalLine(`Lote '${loteProd}' não encontrado. Use 'listar' para ver os lotes disponíveis.`, 'error');
+              return;
+            }
+            
+            if (isNaN(metrosProd) || metrosProd <= 0) {
+              addTerminalLine('Quantidade de metros deve ser um número positivo.', 'error');
+              return;
+            }
+            
+            productionData[loteProd].produced += metrosProd;
+            if (productionData[loteProd].produced > productionData[loteProd].total) {
+              productionData[loteProd].produced = productionData[loteProd].total;
+              addTerminalLine(`Atenção: Produção limitada ao total do lote (${productionData[loteProd].total}m).`);
+            }
+            
+            addTerminalLine(`Produção de ${metrosProd}m registrada no lote ${loteProd}.`);
+            updateMap();
+            break;
+            
+          case 'iniciar':
+            if (args.length < 2) {
+              addTerminalLine('Uso: iniciar [lote] [metros]', 'error');
+              return;
+            }
+            
+            const loteIni = args[0];
+            const metrosIni = parseFloat(args[1]);
+            
+            if (!productionData[loteIni]) {
+              addTerminalLine(`Lote '${loteIni}' não encontrado. Use 'listar' para ver os lotes disponíveis.`, 'error');
+              return;
+            }
+            
+            if (isNaN(metrosIni) || metrosIni <= 0) {
+              addTerminalLine('Quantidade de metros deve ser um número positivo.', 'error');
+              return;
+            }
+            
+            productionData[loteIni].inProgress = metrosIni;
+            addTerminalLine(`Produção de ${metrosIni}m iniciada no lote ${loteIni}.`);
+            updateMap();
+            break;
+            
+          case 'status':
+            if (args.length < 1) {
+              addTerminalLine('Uso: status [lote]', 'error');
+              return;
+            }
+            
+            const loteStatus = args[0];
+            
+            if (!productionData[loteStatus]) {
+              addTerminalLine(`Lote '${loteStatus}' não encontrado. Use 'listar' para ver os lotes disponíveis.`, 'error');
+              return;
+            }
+            
+            const data = productionData[loteStatus];
+            const percent = Math.round((data.produced / data.total) * 100);
+            addTerminalLine(`Status do lote ${loteStatus}:`);
+            addTerminalLine(`  Total: ${data.total}m`);
+            addTerminalLine(`  Produzido: ${data.produced}m (${percent}%)`);
+            addTerminalLine(`  Em execução: ${data.inProgress}m`);
+            addTerminalLine(`  Restante: ${data.total - data.produced}m`);
+            break;
+            
+          case 'listar':
+            addTerminalLine('Lotes disponíveis:');
+            Object.keys(productionData).forEach(id => {
+              if (productionData[id].type === 'lote') {
+                const data = productionData[id];
+                const percent = Math.round((data.produced / data.total) * 100);
+                addTerminalLine(`  ${id}: ${data.produced}/${data.total}m (${percent}%)`);
+              }
+            });
+            break;
+            
+          case 'limpar':
+            terminal.innerHTML = '';
+            addTerminalLine('Terminal limpo.');
+            break;
+            
+          case 'ajuda':
+            addTerminalLine('Comandos disponíveis:');
+            addTerminalLine('  produzir [lote] [metros] - Registrar produção em um lote');
+            addTerminalLine('  iniciar [lote] [metros] - Iniciar produção em um lote');
+            addTerminalLine('  status [lote] - Ver status de um lote');
+            addTerminalLine('  listar - Listar todos os lotes');
+            addTerminalLine('  limpar - Limpar o terminal');
+            addTerminalLine('  ajuda - Mostrar esta ajuda');
+            break;
+            
+          default:
+            addTerminalLine(`Comando '${cmd}' não reconhecido. Digite 'ajuda' para ver os comandos disponíveis.`, 'error');
+        }
+      }
+      
+      // Event listener para entrada de comandos
+      commandInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const command = commandInput.value.trim();
+          if (command) {
+            processCommand(command);
+            commandInput.value = '';
           }
         }
       });
-    } else {
-      console.error("Erro: O cabeçalho da aba retrátil (.collapsible-header) não foi encontrado.");
-    }
+      
+      // Processar elementos do SVG após um breve delay para garantir que o SVG foi carregado
+      setTimeout(processSVGElements, 100);
+      
+      // Focar no input ao carregar a página
+      commandInput.focus();
+    });
   </script>
+</body>
+</html>
